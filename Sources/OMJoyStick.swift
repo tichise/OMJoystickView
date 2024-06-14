@@ -23,99 +23,34 @@ public struct OMJoystick: View {
     var downIcon: Image?
     
     var isDebug = false
-    
-    var stickPosition: CGPoint {
-        let stickPositionX = floor(locationX - bigRingRadius)
         
-        // 上をY軸プラスにするためにマイナスをかける
-        var stickPositionY = floor(locationY - bigRingRadius) * -1
-        
-        // stickPositionYが-0の場合は-を消す
-        if (stickPositionY == -0) {
-            stickPositionY = 0
-        }
-        
-        return CGPoint(x: stickPositionX, y: stickPositionY)
-    }
-    
-    @State private var joyStickState: JoyStickState = .center
-    
     public var completionHandler: ((_ joyStickState: JoyStickState, _ stickPosition: CGPoint, _ angle: CGFloat?, _ distanceFromOrigin: Int) -> Void)
     
-    var org: CGPoint {
-        return CGPoint(x: self.bigRingRadius, y: self.bigRingRadius)
-    }
-    
-    @State var locationX: CGFloat = 0
-    @State var locationY: CGFloat = 0
-    
     let iconPadding: CGFloat = 10
-    
-    var smallRingRadius: CGFloat
-    var bigRingRadius: CGFloat
-    
-    var smallRingLocationX: CGFloat {
-        return locationX - bigRingRadius
-    }
-    
-    var smallRingLocationY: CGFloat {
-        return locationY - bigRingRadius
-    }
     
     var dragGesture: some Gesture {
         // minimumDistanceが1以上だとタッチイベントを一切拾わない
         DragGesture(minimumDistance: 0)
             .onChanged{ value in
-                let distance = self.org.getDistance(otherPoint: value.location)
-                
-                let smallRingLimitCenter: CGFloat = self.bigRingRadius - self.smallRingRadius
-                
-                if (distance <= smallRingLimitCenter) {
-                    // 円の範囲内
-                    self.locationX = value.location.x
-                    self.locationY = value.location.y
-                    
-                    
-                } else {
-                    // 円の範囲外の場合は
-                    let radian = self.org.getRadian(pointOnCircle: value.location)
-                    
-                    let pointOnCircle = self.org.getPointOnCircle(radius: smallRingLimitCenter, radian: radian)
-                    
-                    self.locationX = pointOnCircle.x
-                    self.locationY = pointOnCircle.y
-                }
-                
-                // 原点からの距離を取得
-                let distanceFromOrigin = JoyStickStateCalculator.getDistanceFromOrigin(stickPosition: stickPosition)
-                
+                viewModel.onChanged(value: value)
+
+                let stickPosition = viewModel.stickPosition
+
                 // 角度を取得
                 let angle = JoyStickStateCalculator.getAngle(stickPosition: stickPosition)
                 
-                if viewModel.isOctantLinesVisible {
-                    // 八等分の場合
-                    self.joyStickState = JoyStickStateCalculator.getJoyStickStateOctant(angle: angle,
-                        stength: distanceFromOrigin
-                    )
-                } else {
-                    // 四等分の場合
-                    self.joyStickState = JoyStickStateCalculator.getJoyStickStateQuadrant(angle: angle,
-                        distanceFromOrigin: distanceFromOrigin
-                    )
-                }
+                let distanceFromOrigin = JoyStickStateCalculator.getDistanceFromOrigin(stickPosition: stickPosition)
                 
-                self.completionHandler(self.joyStickState,  self.stickPosition, angle, distanceFromOrigin)
+                self.completionHandler(viewModel.joyStickState,  viewModel.stickPosition, angle, distanceFromOrigin)
         }
         .onEnded{ value in
-
-            self.locationX = self.bigRingRadius
-            self.locationY = self.bigRingRadius
+            viewModel.onEnded()
             
-            self.joyStickState = .center
             let angle: CGFloat? = nil
             let discanceFromOrigin = 0
+            let stickPosition = viewModel.stickPosition
             
-            self.completionHandler(self.joyStickState,  self.stickPosition, angle, discanceFromOrigin)
+            self.completionHandler(viewModel.joyStickState,  stickPosition, angle, discanceFromOrigin)
         }
     }
     
@@ -138,13 +73,10 @@ public struct OMJoystick: View {
             self.downIcon = iconSetting.downIcon
         }
         
-        self.smallRingRadius = smallRingRadius
-        self.bigRingRadius = bigRingRadius
-        
         self.completionHandler = completionHandler
         
         // ViewModelの初期化
-        self.viewModel = OMJoystickViewModel(isOctantLinesVisible: isOctantLinesVisible)
+        self.viewModel = OMJoystickViewModel(isOctantLinesVisible: isOctantLinesVisible, smallRingRadius: smallRingRadius, bigRingRadius: bigRingRadius)
     }
     
     public var body: some View {
@@ -162,9 +94,9 @@ public struct OMJoystick: View {
                     BigRing(
                         bigRingNormalBackgroundColor: bigRingNormalBackgroundColor,  bigRingDarkBackgroundColor: bigRingDarkBackgroundColor, 
                         bigRingStrokeColor: bigRingStrokeColor,
-                        bigRingDiameter: bigRingRadius*2).environmentObject(viewModel).gesture(dragGesture)
+                        bigRingDiameter: viewModel.bigRingRadius*2).environmentObject(viewModel).gesture(dragGesture)
                     
-                    SmallRing(smallRingDiameter: smallRingRadius*2, subRingColor: subRingColor).offset(x: smallRingLocationX, y: smallRingLocationY).environmentObject(viewModel).allowsHitTesting(false)
+                    SmallRing(smallRingDiameter: viewModel.smallRingRadius*2, subRingColor: subRingColor).offset(x: viewModel.smallRingLocationX, y: viewModel.smallRingLocationY).environmentObject(viewModel).allowsHitTesting(false)
                 }
                 
                 rightIcon?.renderingMode(.template)
@@ -177,28 +109,31 @@ public struct OMJoystick: View {
             if isDebug {                
                 VStack(spacing: 5) {
                     HStack() {
-                        Text("StickPosition:").font(.body)
-                        Text(stickPosition.x.text()).font(.body)
+                        Text("LocationXY:").font(.body)
+                        Text(viewModel.locationX.text()).font(.body)
                         Text(":").font(.body)
-                        Text(stickPosition.y.text()).font(.body)
+                        Text(viewModel.locationY.text()).font(.body)
+                    }
+                    HStack() {
+                        Text("StickPosition:").font(.body)
+                        Text(viewModel.stickPosition.x.text()).font(.body)
+                        Text(":").font(.body)
+                        Text(viewModel.stickPosition.y.text()).font(.body)
                     }
                     HStack {
                         Text("JoyStickState:").font(.body)
-                        Text(joyStickState.rawValue).font(.body)
+                        Text(viewModel.joyStickState.rawValue).font(.body)
                     }
                     HStack {
                         Text("DistanceFromOrigin:").font(.body)
-                        Text(String(JoyStickStateCalculator.getDistanceFromOrigin(stickPosition: stickPosition))).font(.body)
+                        Text(String(JoyStickStateCalculator.getDistanceFromOrigin(stickPosition: viewModel.stickPosition))).font(.body)
                     }
                     HStack {
                         Text("Angle:").font(.body)
-                        Text(JoyStickStateCalculator.getAngle(stickPosition: stickPosition).text()).font(.body)
+                        Text(JoyStickStateCalculator.getAngle(stickPosition: viewModel.stickPosition).text()).font(.body)
                     }
                 }
             }
-        }.onAppear(){
-            self.locationX = self.bigRingRadius
-            self.locationY = self.bigRingRadius
         }.padding(40)
     }
 }

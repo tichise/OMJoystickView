@@ -54,10 +54,10 @@ struct BigRing: View {
 // BingRingのPreview用
 struct BigRing_Previews: PreviewProvider {
     static var previews: some View {
-        BigRing(bigRingNormalBackgroundColor: .white, bigRingDarkBackgroundColor: .black, bigRingStrokeColor: .primary, bigRingDiameter: 120).environmentObject(OMJoystickViewModel(isOctantLinesVisible: true))
+        BigRing(bigRingNormalBackgroundColor: .white, bigRingDarkBackgroundColor: .black, bigRingStrokeColor: .primary, bigRingDiameter: 120).environmentObject(OMJoystickViewModel(isOctantLinesVisible: true, smallRingRadius: 30, bigRingRadius: 60))
         
-        BigRing(bigRingNormalBackgroundColor: .white, bigRingDarkBackgroundColor: .gray, bigRingStrokeColor: .red, bigRingDiameter: 220).environmentObject(OMJoystickViewModel(isOctantLinesVisible: true))
+        BigRing(bigRingNormalBackgroundColor: .white, bigRingDarkBackgroundColor: .gray, bigRingStrokeColor: .red, bigRingDiameter: 220).environmentObject(OMJoystickViewModel(isOctantLinesVisible: true, smallRingRadius: 30, bigRingRadius: 60))
         
-        BigRing(bigRingNormalBackgroundColor: .white, bigRingDarkBackgroundColor: .black, bigRingStrokeColor: .primary, bigRingDiameter: 120).environmentObject(OMJoystickViewModel(isOctantLinesVisible: false))
+        BigRing(bigRingNormalBackgroundColor: .white, bigRingDarkBackgroundColor: .black, bigRingStrokeColor: .primary, bigRingDiameter: 120).environmentObject(OMJoystickViewModel(isOctantLinesVisible: false, smallRingRadius: 30, bigRingRadius: 60))
     }
 }
